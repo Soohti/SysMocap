@@ -20,12 +20,6 @@ document.body.setAttribute(
         globalSettings.ui.themeColor
 );
 
-// import mocap web server
-var my_server = null;
-var ipcRenderer = null;
-if (globalSettings.forward.enableForwarding)
-    ipcRenderer = require("electron").ipcRenderer;
-// my_server = require("../webserv/server.js");
 
 // import Helper Functions from Kalidokit
 const remap = Kalidokit.Utils.remap;
@@ -33,10 +27,10 @@ const clamp = Kalidokit.Utils.clamp;
 const lerp = Kalidokit.Vector.lerp;
 
 // VRM object
-let currentVrm = null;
+let currentVrm;
 
-// Whether mediapipe ready
-var started = false;
+var mocapData = null;
+
 
 // renderer
 const renderer = new THREE.WebGLRenderer({
@@ -86,49 +80,30 @@ if (!globalSettings.output.showFPS) {
 
 const stats = new Stats();
 stats.domElement.style.position = "absolute";
-stats.domElement.style.top = "26px";
+stats.domElement.style.top = "20px";
 stats.domElement.style.left = "10px";
 statsContainer.appendChild(stats.dom);
 
 const stats2 = new Stats();
 stats2.domElement.style.position = "absolute";
-stats2.domElement.style.top = "26px";
+stats2.domElement.style.top = "20px";
 stats2.domElement.style.left = "100px";
 statsContainer.appendChild(stats2.dom);
+
+// model info
+var modelObj = JSON.parse(localStorage.getItem("modelInfo"));
+var modelPath = modelObj.path;
 
 // Main Render Loop
 const clock = new THREE.Clock();
 
-function animate() {
-    requestAnimationFrame(animate);
-
-    stats.update();
-
-    if (currentVrm) {
-        // Update model to render physics
-        currentVrm.update(clock.getDelta());
-    }
-    renderer.render(scene, orbitCamera);
-}
-animate();
-
-var modelObj = JSON.parse(localStorage.getItem("modelInfo"));
-var modelPath = modelObj.path;
 
 var fileType = modelPath
     .substring(modelPath.lastIndexOf(".") + 1)
     .toLowerCase();
 
-var skeletonHelper = null;
+var skeletonHelper;
 
-// init server
-if (ipcRenderer)
-    ipcRenderer.send(
-        "startWebServer",
-        parseInt(globalSettings.forward.port),
-        modelPath,
-        globalSettings.forward.supportForWebXR
-    );
 // my_server.startServer(parseInt(globalSettings.forward.port), modelPath);
 
 const light = new THREE.AmbientLight(0xffffff, 0.8);
@@ -227,6 +202,7 @@ loader.load(
 
     (error) => console.error(error)
 );
+
 
 // Animate Rotation Helper function
 const rigRotation = (
@@ -418,9 +394,9 @@ const rigFace = (riggedFace) => {
 };
 
 var positionOffset = {
-    x: 0,
-    y: 1,
-    z: 0,
+    x: 0.0,
+    y: 1.0,
+    z: 0.0,
 };
 
 /* VRM Character Animator */
@@ -428,60 +404,21 @@ const animateVRM = (vrm, results) => {
     if (!vrm && !skeletonHelper) {
         return;
     }
+    if(!results) return;
     // Take the results from `Holistic` and animate character based on its Face, Pose, and Hand Keypoints.
-    let riggedPose, riggedLeftHand, riggedRightHand, riggedFace;
-
-    const faceLandmarks = results.faceLandmarks;
-    // Pose 3D Landmarks are with respect to Hip distance in meters
-    const pose3DLandmarks = results.ea;
-    // Pose 2D landmarks are with respect to videoWidth and videoHeight
-    const pose2DLandmarks = results.poseLandmarks;
-    // Be careful, hand landmarks may be reversed
-    const leftHandLandmarks = results.rightHandLandmarks;
-    const rightHandLandmarks = results.leftHandLandmarks;
-
-    if (faceLandmarks) {
-        riggedFace = Kalidokit.Face.solve(faceLandmarks, {
-            runtime: "mediapipe",
-            video: videoElement,
-        });
-    }
-
-    if (pose2DLandmarks && pose3DLandmarks) {
-        riggedPose = Kalidokit.Pose.solve(pose3DLandmarks, pose2DLandmarks, {
-            runtime: "mediapipe",
-            video: videoElement,
-        });
-    }
-
-    if (leftHandLandmarks) {
-        riggedLeftHand = Kalidokit.Hand.solve(leftHandLandmarks, "Left");
-    }
-
-    if (rightHandLandmarks && fileType == "vrm") {
-        riggedRightHand = Kalidokit.Hand.solve(rightHandLandmarks, "Right");
-    }
-
-    if (ipcRenderer)
-        ipcRenderer.send(
-            "sendBoradcast",
-            JSON.stringify({
-                type: "xf-sysmocap-data",
-                riggedPose: riggedPose,
-                riggedLeftHand: riggedLeftHand,
-                riggedRightHand: riggedRightHand,
-                riggedFace: riggedFace,
-            })
-        );
+    let riggedPose = results.riggedPose,
+        riggedLeftHand = results.riggedLeftHand,
+        riggedRightHand = results.riggedRightHand,
+        riggedFace = results.riggedFace;
 
     // Animate Face
-    if (faceLandmarks) {
+    if (riggedFace ) {
         rigRotation("Neck", riggedFace.head, 0.7);
-        if (fileType == "vrm") rigFace(riggedFace);
+        if (fileType == "vrm") rigFace(structuredClone(riggedFace));
     }
 
     // Animate Pose
-    if (pose2DLandmarks && pose3DLandmarks) {
+    if (riggedPose) {
         rigRotation("Hips", riggedPose.Hips.rotation, 0.7);
         rigPosition(
             "Hips",
@@ -509,7 +446,7 @@ const animateVRM = (vrm, results) => {
     }
 
     // Animate Hands
-    if (leftHandLandmarks && fileType == "vrm") {
+    if (riggedLeftHand  && fileType == "vrm") {
         rigRotation("LeftHand", {
             // Combine pose rotation Z and hand rotation X Y
             z: riggedPose.LeftHand.z,
@@ -547,7 +484,7 @@ const animateVRM = (vrm, results) => {
         );
         rigRotation("LeftLittleDistal", riggedLeftHand.LeftLittleDistal);
     }
-    if (rightHandLandmarks && fileType == "vrm") {
+    if (riggedRightHand && fileType == "vrm") {
         // riggedRightHand = Kalidokit.Hand.solve(rightHandLandmarks, "Right");
         rigRotation("RightHand", {
             // Combine Z axis from pose hand and X/Y axis from hand wrist rotation
@@ -587,133 +524,34 @@ const animateVRM = (vrm, results) => {
         rigRotation("RightLittleDistal", riggedRightHand.RightLittleDistal);
     }
 
-    // if (my_server)
-    //     my_server.sendBoradcast(
-    //         JSON.stringify({
-    //             type: "xf-sysmocap-data",
-    //             riggedPose: riggedPose,
-    //             riggedLeftHand: riggedLeftHand,
-    //             riggedRightHand: riggedRightHand,
-    //             riggedFace: riggedFace,
-    //         })
-    //     );
 };
 
-let videoElement = document.querySelector(".input_video"),
-    guideCanvas = document.querySelector("canvas.guides");
+function animate() {
+    requestAnimationFrame(animate);
 
-const onResults = (results) => {
+    animateVRM(currentVrm, mocapData);
+
+    stats.update();
+
+    if (currentVrm) {
+        // Update model to render physics
+        currentVrm.update(clock.getDelta());
+    }
+    renderer.render(scene, orbitCamera);
+}
+animate();
+
+var isStart = false;
+
+window.onMocapData = (data)=>{
+    if(!isStart){
+        document.getElementById('loading').remove()
+        isStart = true
+    }
+    console.log("sendRenderDataForward")
     stats2.update();
-    // Draw landmark guides
-    if (globalSettings.preview.showSketelonOnInput) drawResults(results);
     // Animate model
-    animateVRM(currentVrm, results);
-    if (!started) {
-        document.getElementById("loading").remove();
-        if (localStorage.getItem("useCamera") == "file") videoElement.play();
-        started = true;
-    }
-};
-
-const holistic = new Holistic({
-    locateFile: (file) => {
-        if (typeof require != "undefined")
-            return __dirname + `/../node_modules/@mediapipe/holistic/${file}`;
-        else return `../node_modules/@mediapipe/holistic/${file}`;
-    },
-});
-
-holistic.setOptions({
-    modelComplexity: parseInt(globalSettings.mediapipe.modelComplexity),
-    smoothLandmarks: globalSettings.mediapipe.smoothLandmarks,
-    minDetectionConfidence: parseFloat(
-        globalSettings.mediapipe.minDetectionConfidence
-    ),
-    minTrackingConfidence: parseFloat(
-        globalSettings.mediapipe.minTrackingConfidence
-    ),
-    refineFaceLandmarks: globalSettings.mediapipe.refineFaceLandmarks,
-});
-// Pass holistic a callback function
-holistic.onResults(onResults);
-
-const drawResults = (results) => {
-    guideCanvas.width = videoElement.videoWidth;
-    guideCanvas.height = videoElement.videoHeight;
-    let canvasCtx = guideCanvas.getContext("2d");
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
-    // Use `Mediapipe` drawing functions
-    drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {
-        color: "#00cff7",
-        lineWidth: 4,
-    });
-    drawLandmarks(canvasCtx, results.poseLandmarks, {
-        color: "#ff0364",
-        lineWidth: 2,
-    });
-    drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {
-        color: "#C0C0C070",
-        lineWidth: 1,
-    });
-    if (results.faceLandmarks && results.faceLandmarks.length === 478) {
-        //draw pupils
-        drawLandmarks(
-            canvasCtx,
-            [results.faceLandmarks[468], results.faceLandmarks[468 + 5]],
-            {
-                color: "#ffe603",
-                lineWidth: 2,
-            }
-        );
-    }
-    drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {
-        color: "#eb1064",
-        lineWidth: 5,
-    });
-    drawLandmarks(canvasCtx, results.leftHandLandmarks, {
-        color: "#00cff7",
-        lineWidth: 2,
-    });
-    drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {
-        color: "#22c3e3",
-        lineWidth: 5,
-    });
-    drawLandmarks(canvasCtx, results.rightHandLandmarks, {
-        color: "#ff0364",
-        lineWidth: 2,
-    });
-};
-
-// switch use camera or video file
-if (localStorage.getItem("useCamera") == "camera") {
-    const camera = new Camera(videoElement, {
-        onFrame: async () => {
-            await holistic.send({ image: videoElement });
-        },
-        width: 1280,
-        height: 720,
-    });
-    camera.start();
-} else {
-    // path of video file
-    videoElement.src = localStorage.getItem("videoFile");
-    videoElement.loop = true;
-    videoElement.controls = true;
-
-    document.querySelector("#model").style.transform = "scale(-1, 1)";
-
-    videoElement.style.transform = "";
-    guideCanvas.style.transform = "";
-
-    var videoFrameCallback = async () => {
-        // videoElement.pause()
-        await holistic.send({ image: videoElement });
-        videoElement.requestVideoFrameCallback(videoFrameCallback);
-        // videoElement.play()
-    };
-
-    videoElement.requestVideoFrameCallback(videoFrameCallback);
+    mocapData = data;
 }
 
 var app = new Vue({
@@ -726,16 +564,16 @@ var app = new Vue({
 function changeTarget(target) {
     app.target = target;
     if (target == "face") {
-        positionOffset = { x: 0, y: 1, z: 0 };
+        positionOffset = { x: 0.0, y: 1.0, z: 0.0 };
     } else if (target == "half") {
         positionOffset = {
-            x: 0,
+            x: 0.0,
             y: 1.1,
             z: 1,
         };
     } else if (target == "full") {
         positionOffset = {
-            x: 0,
+            x: 0.0,
             y: 1.4,
             z: 2,
         };
@@ -764,3 +602,8 @@ document.addEventListener("keydown", (event) => {
             break;
     }
 });
+
+
+if (localStorage.getItem("useCamera") !== "camera") {
+    document.querySelector("#model").style.transform = "scale(-1, 1)";
+}

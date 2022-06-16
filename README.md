@@ -1,4 +1,4 @@
-![Snipaste_2022-05-07_13-31-46](README.assets/Snipaste_2022-05-07_13-31-46.png)
+![banner](https://user-images.githubusercontent.com/8101613/172903631-e9610e0b-ed46-4c8c-a3f9-3a098265f820.png)
 
 <h1 align="center">
 SysMocap
@@ -8,6 +8,16 @@ SysMocap
 <a href="https://github.com/xianfei/SysMocap/actions" target="_blank">
 <img src="https://github.com/xianfei/SysMocap/actions/workflows/main.yml/badge.svg" alt="GitHub Actions" />
 </a>
+<a href="https://github.com/xianfei/SysMocap/releases" target="_blank">
+<img src="https://badgen.net/github/release/xianfei/SysMocap?color=cyan" alt="release" />
+</a>
+<a href="#" target="_blank">
+<img src="https://badgen.net/github/forks/xianfei/SysMocap" alt="forks" />
+</a>
+<a href="#" target="_blank">
+<img src="https://badgen.net/github/stars/xianfei/SysMocap?color=yellow" alt="stars" />
+</a>
+
 </p>
 
 <p align="center">
@@ -26,7 +36,7 @@ Available for Windows, macOS (packaged) & Linux (source code only)
 
 🌟 Beautiful GUI with Material Design 3 Color System
 
-![image85](README.assets/image85.png)
+![GUI](https://user-images.githubusercontent.com/8101613/172905805-16c7d081-66ff-4324-b92a-4cdfa1eb2ac9.png)
 
 🌟 Easy to used. You can import 3D models just with drags.
 
@@ -38,25 +48,25 @@ https://user-images.githubusercontent.com/8101613/167257906-596919a5-4c0e-4795-8
 
 🌟 Model viewer with bones & dressing controller
 
-![WX20220507-222225@2x](README.assets/WX20220507-222225@2x.png)
+![Model viewer](https://user-images.githubusercontent.com/8101613/172905954-d77fad63-8847-4c95-831c-5d8917f6ee18.png)
 
 🌟 Support OBS live-streaming
 
-![WechatIMG21](README.assets/WechatIMG21.jpeg)
+![OBS](https://user-images.githubusercontent.com/8101613/172906807-8ef482c2-95cc-4290-8b9b-38f2d5f7a188.jpg)
 
 🌟 Support full-body motion capture
 
-![Screen Shot 2022-05-23 at 00 31 27](https://user-images.githubusercontent.com/8101613/171019881-8b95a1fd-c513-430e-b55e-a449a3524e7b.png)
+![Full-body](https://user-images.githubusercontent.com/8101613/171019881-8b95a1fd-c513-430e-b55e-a449a3524e7b.png)
 
-![10](README.assets/10.webp)
+![Full-body-animotion](https://user-images.githubusercontent.com/8101613/173759813-4f0d4540-abab-41dd-b343-5fc5b9be4840.png)
 
 🌟 Support Auto Skeleton Detection for All VRM files and Mixamo Format FBX files
 
-![4](README.assets/4.webp)
+![fbx-mixamo-animotion](https://user-images.githubusercontent.com/8101613/173759682-f38c80f8-8c9a-407d-9cec-19a925cae1c0.png)
 
 🌟 Support Any Skeleton Structure with Manual Mapping
 
-![5](README.assets/5.webp)
+![bdd-animotion](https://user-images.githubusercontent.com/8101613/173759924-cbc5cc6c-2b96-444d-a070-3d761d6e04bb.png)
 
 🌟 Does not require a discrete graphics card and runs smoothly even on eight-year-old computers (i7-4790k/GTX770/16G RAM)
 
@@ -66,25 +76,23 @@ https://user-images.githubusercontent.com/8101613/167257906-596919a5-4c0e-4795-8
 
 🌟 Facial
 
-![9](README.assets/9.webp)
+![Facial-animotion](https://user-images.githubusercontent.com/8101613/173760130-1cac01ad-b597-438b-a7f5-eaae43ff2538.png)
 
 🌟 Half-body
 
-![7](README.assets/7.webp)
+![Half-body-animotion](https://user-images.githubusercontent.com/8101613/173760381-19117cc7-5ed7-4483-a898-ca540bb67855.png)
 
 🌟 Half-body with Hands
 
-![6](README.assets/6.webp)
+![Half-body with Hands animotion](https://user-images.githubusercontent.com/8101613/173760449-ad3c9c78-c309-43b7-a0bb-873f23b069ec.png)
 
 🌟 Full-body
 
-![2](README.assets/2.webp)
-
-![1](README.assets/1.webp)
+![Full-body-animotion](https://user-images.githubusercontent.com/8101613/173760510-0f7b2958-11c7-4c98-8950-778af2272d3f.png)
 
 ### System architecture
 
-![WX20220507-222732@2x](README.assets/WX20220507-222732@2x.png)
+![System architecture](https://user-images.githubusercontent.com/8101613/173760568-a409beac-c966-43d6-a11f-11baf091e078.png)
 
 ### How to use
 
@@ -101,9 +109,9 @@ npm start
 
 1. ~~On Windows platform, "Use Discrete Graphics on Dual GPU Laptop" and "Mocap Data Forward" can not use at same time.~~
 
-2. Camera controller only support VRM
+2. ~~Camera controller only support VRM~~
 
-3. Forwarding only support VRM
+3. ~~Forwarding only support VRM~~
 
 ### Notice
 
@@ -166,3 +174,15 @@ npm start
 - [x] Mocap data forwarding via network
 
 - [x] Adapt for Linux and macOS 
+
+### Thanks
+
+You can see all `dependencies` in [package.json](https://github.com/xianfei/SysMocap/blob/main/package.json)
+
+- [google/mediapipe/Holistic](https://google.github.io/mediapipe/solutions/holistic.html) for Mocap
+
+- [kalidokit](https://github.com/yeemachine/kalidokit) for Calulate Mocap Data
+
+- [electron](https://github.com/electron/electron) and Vue.js for GUI Framework
+
+- [Material color utilities](https://github.com/material-foundation/material-color-utilities) for Color Picking

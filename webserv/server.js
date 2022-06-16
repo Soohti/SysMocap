@@ -22,6 +22,7 @@ app.use(express.static(__dirname + "/public"));
 // var expressWs = require("express-ws")(app);
 var modelPath = null;
 var server = null;
+var modelObj = null;
 
 let opts = {
     key: fs.readFileSync(__dirname + '/../webserv/ssl/private.pem'),
@@ -49,9 +50,15 @@ app.get("/useWebXR", (req, res) => {
     res.send(JSON.stringify(useWebXR));
 });
 
+app.get("/modelInfo", (req, res) => {
+    res.send(JSON.stringify(modelObj));
+});
+
 module.exports = {
-    startServer: function (port, modelPath_,useXR) {
-        modelPath = path.resolve(__dirname, modelPath_);
+    startServer: function (port, modelStr,useXR) {
+        modelObj = JSON.parse(modelStr)
+        modelPath = path.resolve(__dirname, modelObj.path);
+        modelObj.path = "/model"
         useWebXR = useXR;
         server = httpxServer.listen(port, "0.0.0.0", function () {
             console.log("[ Mocap Forwarding Server ] Server Started.");
@@ -68,8 +75,12 @@ module.exports = {
         // for (var ws of expressWs.getWss().clients) {
         //     ws.send(obj);
         // }
+        try{
         if(wss)wss.emit('message',obj)
         if(ws)ws.emit('message',obj)
+    }catch(e){
+        console.log(e)
+    }
         
     },
 };
