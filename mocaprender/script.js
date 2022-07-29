@@ -99,6 +99,8 @@ statsContainer.appendChild(stats2.dom);
 // Main Render Loop
 const clock = new THREE.Clock();
 
+var isRecordingStarted = false;
+
 function animate() {
     requestAnimationFrame(animate);
 
@@ -109,6 +111,11 @@ function animate() {
         currentVrm.update(clock.getDelta());
     }
     renderer.render(scene, orbitCamera);
+
+    if(isRecordingStarted)html2canvas(elementToRecord).then(function (canvas) {
+        context.clearRect(0, 0, canvas2d.width, canvas2d.height);
+        context.drawImage(canvas, 0, 0, canvas2d.width, canvas2d.height);
+    });
 }
 animate();
 
@@ -685,7 +692,13 @@ const drawResults = (results) => {
 // switch use camera or video file
 if (localStorage.getItem("useCamera") == "camera") {
     navigator.mediaDevices
-        .getUserMedia({ video: { deviceId: localStorage.getItem("cameraId"),width: 1280, height: 720 } })
+        .getUserMedia({
+            video: {
+                deviceId: localStorage.getItem("cameraId"),
+                width: 1280,
+                height: 720,
+            },
+        })
         .then(function (stream) {
             videoElement.srcObject = stream;
             videoElement.play();
@@ -768,5 +781,80 @@ document.addEventListener("keydown", (event) => {
         case "ArrowDown":
             positionOffset.y -= step;
             break;
+        case "r":
+            if (isRecordingStarted) {
+                stopRecording();
+                document.getElementById("recording").style.display = "none";
+            } else {
+                startRecording();
+                document.getElementById("recording").style.display = "";
+            }
     }
 });
+
+var contentDom = document.querySelector("#model");
+
+//阻止相关事件默认行为
+contentDom.ondragcenter =
+    contentDom.ondragover =
+    contentDom.ondragleave =
+        () => {
+            return false;
+        };
+
+//对拖动释放事件进行处理
+contentDom.ondrop = (e) => {
+    //console.log(e);
+    var filePath = e.dataTransfer.files[0].path.replaceAll("\\", "/");
+    console.log(filePath);
+    contentDom.style.backgroundImage = `url(${filePath})`;
+    contentDom.style.backgroundSize = "cover";
+    contentDom.style.backgroundPosition = "center";
+    contentDom.style.backgroundRepeat = "no-repeat";
+};
+
+var elementToRecord = contentDom;
+var canvas2d = document.getElementById("background-canvas");
+var context = canvas2d.getContext("2d");
+
+canvas2d.width = elementToRecord.clientWidth;
+canvas2d.height = elementToRecord.clientHeight;
+
+var recorder = new RecordRTC(canvas2d, {
+    type: "canvas",
+});
+
+function startRecording() {
+    this.disabled = true;
+
+    isRecordingStarted = true;
+
+    recorder.startRecording();
+}
+
+function stopRecording() {
+    this.disabled = true;
+
+    recorder.stopRecording(function () {
+        isRecordingStarted = false;
+
+        var blob = recorder.getBlob();
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "video.webm";
+
+        link.dispatchEvent(
+            new MouseEvent("click", {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+            })
+        );
+
+        setTimeout(() => {
+            window.URL.revokeObjectURL(blob);
+            link.remove();
+        }, 100);
+    });
+}
